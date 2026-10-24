@@ -1,7 +1,7 @@
 // server.js
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-require('dotenv').config();
 
 // Import Routers
 const cricketRouter = require('./routes/cricket.routes');
