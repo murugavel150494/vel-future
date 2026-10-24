@@ -3,16 +3,60 @@ const ffmpegPath = require('ffmpeg-static');
 const { GoogleGenAI } = require('@google/genai');
 const sharp = require('sharp');
 const fs = require('fs');
+const path = require('path');
 const axios = require('axios');
 require('dotenv').config();
 
 class CricketModel {
+  
+  // Helper to get formatted date identifiers: DDMMYYYY and Filename format
+  static getFormattedDateIdentifiers() {
+    const now = new Date();
+    const dd = String(now.getDate()).padStart(2, '0');
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const yyyy = now.getFullYear();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const min = String(now.getMinutes()).padStart(2, '0');
+    const ss = String(now.getSeconds()).padStart(2, '0');
+
+    return {
+      folderDate: `${dd}${mm}${yyyy}`,
+      filename: `Cricket-news-${dd}-${mm}-${yyyy}-${hh}-${min}-${ss}.mp4`
+    };
+  }
+
   static async generateNewsVideoTask(timestamp) {
     console.log(`[CricketModel] Executing automated Tamil news video pipeline at ${timestamp}`);
 
-    const safeTimestamp = timestamp.replace(/[:.]/g, '-');
     const fontFileName = 'NotoSansTamil.ttf';
     const bulletSymbol = '*';
+
+    // Get date-based folder and file names
+    const { folderDate, filename } = this.getFormattedDateIdentifiers();
+    const outputsDir = path.join(__dirname, '../outputs');
+    const targetDir = path.join(outputsDir, `video${folderDate}`);
+
+    // Ensure target date folder exists
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
+    }
+
+    // Read existing .mp4 files in this date folder
+    const existingFiles = fs.readdirSync(targetDir).filter(file => file.endsWith('.mp4'));
+
+    // 🧹 If folder has 5 or more videos, purge all files in this folder
+    if (existingFiles.length >= 5) {
+      console.log(`[CricketModel] Folder video${folderDate} reached ${existingFiles.length} videos. Purging all files...`);
+      for (const file of existingFiles) {
+        const filePathToDelete = path.join(targetDir, file);
+        if (fs.existsSync(filePathToDelete)) {
+          fs.unlinkSync(filePathToDelete);
+        }
+      }
+    }
+
+    const finalVideoOutputPath = path.join(targetDir, filename);
+    const relativeVideoPath = `video${folderDate}/${filename}`;
 
     function wrapTextToLines(text, maxCharsPerLine = 36) {
       const words = text.split(' ');
@@ -34,7 +78,6 @@ class CricketModel {
     }
 
     const videoConfig = {
-      output: `final-tamil-news-video-${safeTimestamp}.mp4`,
       totalWidth: 1280,
       height: 720,
       fps: 30,
@@ -72,13 +115,13 @@ class CricketModel {
       defaultDurationPerSlide: 4
     };
 
-    async function generateSlideImages() {
-      let slideImageFiles = [];
+    const tempSlideImages = [];
 
+    async function generateSlideImages() {
       for (let i = 0; i < videoConfig.slides.length; i++) {
         const slide = videoConfig.slides[i];
-        const outputPng = `slide_render_${safeTimestamp}_${i}.png`;
-        slideImageFiles.push(outputPng);
+        const outputPng = path.join(targetDir, `slide_render_${Date.now()}_${i}.png`);
+        tempSlideImages.push(outputPng);
 
         let processedImgBuffer;
         try {
@@ -120,8 +163,10 @@ class CricketModel {
 
         let logoBase64 = '';
         try {
-          const logoBuffer = fs.readFileSync(videoConfig.logoPath);
-          logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+          if (fs.existsSync(videoConfig.logoPath)) {
+            const logoBuffer = fs.readFileSync(videoConfig.logoPath);
+            logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+          }
         } catch (e) { }
 
         let svgContent = `
@@ -160,12 +205,9 @@ class CricketModel {
           .toFile(outputPng);
       }
 
-      return slideImageFiles;
+      return tempSlideImages;
     }
 
-    // Dynamic AI-powered SEO and Tamil-infused Thumbnail Prompt Generator
-    // Dynamic AI-powered SEO, Headline & Thumbnail Visual Prompt Generator
-    // Dynamic AI-powered SEO, Headline & Dual Thumbnail Visual Prompt Generator
     async function generateSEOAndThumbnailPrompt() {
       const rawTextContent = videoConfig.slides.map(slide => {
         const headline = slide.headerText || '';
@@ -211,15 +253,15 @@ class CricketModel {
           OUTPUT RULES:
           1. "bestTitle": Combine Tamil and English separated by a pipe symbol "|". Example: "தமிழ் தலைப்பு | English Title". Under 70 characters.
           2. "alternativeTitles": Provide 2 alternative titles following the exact "Tamil | English" format.
-          3. "description": Write a single, clean, cohesive narrative paragraph in Tamil summarizing the news. DO NOT include line breaks ("\\n") or slide numbers. End with relevant hashtags.
+          3. "description": Write a single, clean, cohesive narrative paragraph in Tamil summarizing the news. DO NOT include line breaks or slide numbers. End with relevant hashtags.
           4. "tags": Provide 12 to 18 trending, high-volume search tags (mix of Tamil and English terms).
-          5. "thumbnailDetails": Provide two distinct thumbnail variations (a primary option based on the main hook, and a secondary option highlighting a different narrative angle):
+          5. "thumbnailDetails": Provide two distinct thumbnail variations:
              - "primaryOption":
                  - "headingText": A short, high-CTR, 3 to 6 word Tamil headline (under 35 characters).
-                 - "visualPrompt": Pure ENGLISH image prompt describing the primary visual scene (player/coach focus, emotion, lighting, 4k). NO Tamil characters.
+                 - "visualPrompt": Pure ENGLISH image prompt describing the primary visual scene. NO Tamil characters.
              - "secondaryOption":
-                 - "headingText": An alternative punchy 3 to 6 word Tamil headline focusing on a secondary angle.
-                 - "visualPrompt": Pure ENGLISH image prompt describing a complementary visual scene (e.g., action shot, stadium view, team moment). NO Tamil characters.
+                 - "headingText": An alternative punchy 3 to 6 word Tamil headline.
+                 - "visualPrompt": Pure ENGLISH image prompt describing a complementary visual scene. NO Tamil characters.
 
           Return ONLY a valid JSON object matching this structure (no markdown fences or code blocks):
           {
@@ -232,7 +274,7 @@ class CricketModel {
               "description": "Clean Tamil narrative text #hashtags",
               "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"]
             },
-            "thumbnailDetails": [
+            "thumbnailDetails": {
               "primaryOption": {
                 "headingText": "முதன்மை தமிழ் தலைப்பு",
                 "visualPrompt": "Primary English visual description for photo generation"
@@ -241,7 +283,7 @@ class CricketModel {
                 "headingText": "இரண்டாவது தமிழ் தலைப்பு",
                 "visualPrompt": "Secondary English visual description for photo generation"
               }
-      ]
+            }
           }
         `;
 
@@ -266,7 +308,7 @@ class CricketModel {
           thumbnailDetails: {
             primaryOption: {
               headingText: "பிட்ச் விவகாரத்தில் கம்பீர் அதிரடி!",
-              visualPrompt: "A dramatic cinematic shot of Indian head coach Gautam Gambhir standing on a cricket pitch under stadium floodlights, highly detailed, 4k"
+              visualPrompt: "A dramatic cinematic shot of Indian cricket coach Gautam Gambhir standing on a cricket pitch under stadium floodlights, highly detailed, 4k"
             },
             secondaryOption: {
               headingText: "பிசிசிஐக்கு கம்பீர் கொடுத்த எச்சரிக்கை!",
@@ -305,24 +347,25 @@ class CricketModel {
         ffmpegArgs.push('-c:v', 'libx264');
         ffmpegArgs.push('-preset', 'ultrafast');
         ffmpegArgs.push('-pix_fmt', 'yuv420p');
-        ffmpegArgs.push('-y', videoConfig.output);
+        ffmpegArgs.push('-y', finalVideoOutputPath);
 
         console.log('Stitching video via FFmpeg...');
         const ffmpegProcess = spawn(ffmpegPath, ffmpegArgs);
 
         ffmpegProcess.on('close', (code) => {
+          // Cleanup temporary slide image renders
           slideImages.forEach(file => {
             try { fs.unlinkSync(file); } catch (e) { }
           });
 
           if (code === 0) {
-            console.log(`\nSuccess! Video ready at: ../${videoConfig.output}`);
+            console.log(`\nSuccess! Video ready at: ${relativeVideoPath}`);
             resolve({
               success: true,
               message: 'Dynamic news video, optimized SEO metadata, and thumbnail specs generated successfully!',
-              videoPath: videoConfig.output,
+              videoPath: relativeVideoPath, // Returns "videoDDMMYYYY/Cricket-news-..."
               seoDetails: metadataResult.seoDetails,
-              thumbnailDetails: metadataResult.thumbnailDetails, // Contains { headingText, visualPrompt }
+              thumbnailDetails: metadataResult.thumbnailDetails,
               timestamp
             });
           } else {
@@ -336,20 +379,26 @@ class CricketModel {
   }
 
   static async generateThumbnailTask(timestamp, customHeadline = "பிட்ச் விவகாரத்தில் கம்பீர் அதிரடி!", customPrompt = null) {
-    const safeTimestamp = timestamp.replace(/[:.]/g, '-');
-    const outputThumbnailPath = `cricket_thumbnail_${safeTimestamp}.jpg`;
     const fontFileName = 'NotoSansTamil.ttf';
+    const { folderDate } = this.getFormattedDateIdentifiers();
+    const targetDir = path.join(__dirname, '../outputs', `video${folderDate}`);
+
+    if (!fs.existsSync(targetDir)) {
+      fs.mkdirSync(targetDir, { recursive: true });
+    }
+
+    const outputThumbnailPath = path.join(`video${folderDate}`, `cricket_thumbnail_${Date.now()}.jpg`);
+    const fullThumbnailPath = path.join(__dirname, '../outputs', outputThumbnailPath);
 
     try {
       const defaultVisualPrompt = "A dramatic cinematic shot of Indian cricket coach Gautam Gambhir looking intense and serious in a stadium press room, high contrast, sports photojournalism style, 4k";
 
-      // 1. Sanitize the prompt: Remove Tamil/non-ASCII characters and special symbols that trigger HTTP 400
       let rawPrompt = customPrompt || defaultVisualPrompt;
       let cleanPrompt = rawPrompt
-        .replace(/[^\x00-\x7F]/g, "") // Remove non-ASCII/Tamil characters from API prompt path
-        .replace(/[^a-zA-Z0-0\s,]/g, "") // Remove special characters except basic punctuation
+        .replace(/[^\x00-\x7F]/g, "")
+        .replace(/[^a-zA-Z0-9\s,]/g, "")
         .trim()
-        .substring(0, 200); // Keep URL length safe
+        .substring(0, 200);
 
       if (!cleanPrompt) {
         cleanPrompt = "A dramatic cinematic shot of cricket stadium floodlights, highly detailed, 4k";
@@ -357,11 +406,8 @@ class CricketModel {
 
       let bgBase64 = '';
 
-      // 2. Fetch AI background image using query-parameter format to prevent 400 URL syntax errors
       try {
         console.log(`Generating base AI image with clean prompt: "${cleanPrompt}"...`);
-
-        // Query param syntax prevents URL routing errors
         const aiImageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(cleanPrompt)}?width=1280&height=720&nologo=true&seed=${Date.now()}`;
 
         const aiImageResponse = await axios.get(aiImageUrl, {
@@ -374,7 +420,6 @@ class CricketModel {
       } catch (apiError) {
         console.warn(`⚠️ AI Image API returned error (${apiError.message}). Falling back to local Sharp canvas...`);
 
-        // Local Fallback: Use picture1.jpg or generate solid backdrop
         if (fs.existsSync('picture1.jpg')) {
           const localImgBuffer = fs.readFileSync('picture1.jpg');
           bgBase64 = `data:image/jpeg;base64,${localImgBuffer.toString('base64')}`;
@@ -386,7 +431,6 @@ class CricketModel {
         }
       }
 
-      // 3. Load optional channel logo watermark
       let logoBase64 = '';
       try {
         if (fs.existsSync('logo.png')) {
@@ -395,7 +439,6 @@ class CricketModel {
         }
       } catch (e) { }
 
-      // 4. Construct high-impact SVG thumbnail with crisp Tamil typography
       const svgThumbnail = `
         <svg width="1280" height="720" xmlns="http://www.w3.org/2000/svg">
           <style>
@@ -415,18 +458,10 @@ class CricketModel {
               font-weight: bold;
               fill: #ffeb3b;
             }
-            .badge-text {
-              font-family: 'TamilFont', sans-serif;
-              font-size: 22px;
-              font-weight: bold;
-              fill: #ffffff;
-            }
           </style>
 
-          <!-- Background Image -->
           <image href="${bgBase64}" x="0" y="0" width="1280" height="720" preserveAspectRatio="xMidYMid slice"/>
 
-          <!-- Dark Gradient Vignette for Text Contrast -->
           <defs>
             <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stop-color="#000000" stop-opacity="0.95"/>
@@ -434,27 +469,18 @@ class CricketModel {
               <stop offset="85%" stop-color="#000000" stop-opacity="0.30"/>
               <stop offset="100%" stop-color="#000000" stop-opacity="0.0"/>
             </linearGradient>
-
-            <linearGradient id="badgeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stop-color="#d32f2f"/>
-              <stop offset="100%" stop-color="#ff6d00"/>
-            </linearGradient>
           </defs>
 
-          <!-- Apply Dark Left Gradient Overlay -->
           <rect width="1280" height="720" fill="url(#textGrad)"/>
 
-          <!-- Channel Logo -->
           ${logoBase64 ? `<image href="${logoBase64}" x="1150" y="40" width="80" height="80"/>` : ''}
 
-          <!-- Dynamic Multi-line Tamil Headline -->
           <text x="70" y="320" class="headline">
             <tspan x="70" dy="0">${customHeadline.substring(0, 28)}</tspan>
             ${customHeadline.length > 28 ? `<tspan x="70" dy="70" class="highlight">${customHeadline.substring(28, 56)}</tspan>` : ''}
             ${customHeadline.length > 56 ? `<tspan x="70" dy="70">${customHeadline.substring(56, 85)}</tspan>` : ''}
           </text>
 
-          <!-- Bottom Footer -->
           <rect x="0" y="650" width="1280" height="70" fill="#0b1d3a" opacity="0.95"/>
           <text x="70" y="694" font-family="'TamilFont', sans-serif" font-size="24px" fill="#00e5ff" font-weight="bold">
             CRICKET TAMIL UPDATES • நேரலை உடனுக்குடன்
@@ -462,10 +488,9 @@ class CricketModel {
         </svg>
       `;
 
-      // 5. Render final JPEG
       await sharp(Buffer.from(svgThumbnail))
         .jpeg({ quality: 95 })
-        .toFile(outputThumbnailPath);
+        .toFile(fullThumbnailPath);
 
       console.log(`Success! High-impact thumbnail created at: ${outputThumbnailPath}`);
       return outputThumbnailPath;

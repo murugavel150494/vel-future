@@ -1,3 +1,5 @@
+const path = require('path');
+const fs = require('fs');
 const CricketModel = require('../models/cricket.model');
 
 /**
@@ -50,5 +52,40 @@ exports.createThumbnail = async (req, res) => {
       success: false, 
       error: error.message || 'Internal server error during thumbnail generation' 
     });
+  }
+};
+
+exports.downloadVideo = async (req, res) => {
+  try {
+    const { folder, filename } = req.params;
+    
+    // Absolute path to outputs/videoDDMMYYYY/filename.mp4
+    const filePath = path.join(__dirname, '../outputs', folder, filename);
+
+    if (!fs.existsSync(filePath)) {
+      return res.status(404).json({ success: false, message: 'Video file not found on server.' });
+    }
+
+    // Triggers file download response safely
+    res.download(filePath, filename, (err) => {
+      if (err) {
+        // Ignore client abort errors (e.g., video player seeking or user canceling download)
+        if (err.code === 'ECONNABORTED' || err.message === 'Request aborted') {
+          console.log(`[Stream Notice] Client closed/aborted connection for file: ${filename}`);
+          return;
+        }
+
+        console.error('Error during file download stream:', err);
+        if (!res.headersSent) {
+          res.status(500).json({ success: false, message: 'Could not download the file.' });
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Error in downloadVideo controller:', error);
+    if (!res.headersSent) {
+      return res.status(500).json({ success: false, error: error.message || 'Internal server error during download' });
+    }
   }
 };
