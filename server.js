@@ -13,9 +13,11 @@ const PORT = process.env.PORT || 3001;
 // Middleware
 app.use(cors({
   origin: [
-    'http://localhost:4200',           // Angular frontend local
-    'https://youtube-frontend.vercel.app' // Vercel production frontend
-  ]
+    'https://vel-future.vercel.app',
+    'https://vel-future-fe.vercel.app',
+    'http://localhost:4200'
+  ],
+  credentials: true
 }));
 app.use(express.json());
 
