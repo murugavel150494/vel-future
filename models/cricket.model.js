@@ -42,7 +42,7 @@ class CricketModel {
       fontColor: '#ffffff',
       logoPath: 'logo.png',
       slides: [
-        { 
+        {
           headerText: 'பிட்ச் தன்மையை கடுமையாக சாடிய கௌதம் கம்பீர்!',
           imagePath: 'picture1.jpg',
           descPoints: [
@@ -51,7 +51,7 @@ class CricketModel {
             "குறிப்பாக இளம் ஃபாஸ்ட் பவுலர்கள் மற்றும் ஸ்பின்னர்களின் திறமை வீணடிக்கப்படுவதாக கவலை தெரிவித்துள்ளார்."
           ]
         },
-        { 
+        {
           headerText: 'வேகப்பந்து வீச்சாளர்களுக்கு தனி பயிற்சி முகாம்!',
           imagePath: 'picture2.jpg',
           descPoints: [
@@ -60,7 +60,7 @@ class CricketModel {
             'இளம் வீரர்களுக்கு மூத்த பவுலர்கள் வழிகாட்ட ஏற்பாடு.'
           ]
         },
-        { 
+        {
           headerText: 'ரசிகர்களின் எதிர்பார்ப்பும் அடுத்த கட்ட நடவடிக்கைகளும்',
           imagePath: 'picture3.jpg',
           descPoints: [
@@ -84,7 +84,7 @@ class CricketModel {
         try {
           const originalImage = sharp(slide.imagePath);
           const metadata = await originalImage.metadata();
-          
+
           const targetW = 480;
           const targetH = 720;
           const ratio = Math.min(targetW / metadata.width, targetH / metadata.height);
@@ -96,7 +96,7 @@ class CricketModel {
             .toBuffer();
 
           const leftOffset = Math.round((targetW - resizedW) / 2);
-          const topOffset = Math.round((targetH - resizedH) / 2) - 40; 
+          const topOffset = Math.round((targetH - resizedH) / 2) - 40;
 
           processedImgBuffer = await sharp({
             create: {
@@ -106,9 +106,9 @@ class CricketModel {
               background: videoConfig.bgColor
             }
           })
-          .composite([{ input: resizedBuffer, left: leftOffset, top: topOffset }])
-          .png()
-          .toBuffer();
+            .composite([{ input: resizedBuffer, left: leftOffset, top: topOffset }])
+            .png()
+            .toBuffer();
 
         } catch (e) {
           processedImgBuffer = await sharp({
@@ -122,7 +122,7 @@ class CricketModel {
         try {
           const logoBuffer = fs.readFileSync(videoConfig.logoPath);
           logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
-        } catch (e) {}
+        } catch (e) { }
 
         let svgContent = `
           <svg width="1280" height="720" xmlns="http://www.w3.org/2000/svg">
@@ -143,9 +143,9 @@ class CricketModel {
 
         let currentY = 160;
         slide.descPoints.forEach(point => {
-          const wrappedLines = wrapTextToLines(point, 36); 
+          const wrappedLines = wrapTextToLines(point, 36);
           svgContent += `<text x="50" y="${currentY}" class="body" font-weight="bold">${bulletSymbol}</text>`;
-          
+
           wrappedLines.forEach((line) => {
             svgContent += `<text x="80" y="${currentY}" class="body">${line}</text>`;
             currentY += 30;
@@ -164,8 +164,9 @@ class CricketModel {
     }
 
     // Dynamic AI-powered SEO and Tamil-infused Thumbnail Prompt Generator
+    // Dynamic AI-powered SEO, Headline & Thumbnail Visual Prompt Generator
+    // Dynamic AI-powered SEO, Headline & Dual Thumbnail Visual Prompt Generator
     async function generateSEOAndThumbnailPrompt() {
-      // Clean, single-paragraph text input for Gemini (no slide markers or forced line breaks)
       const rawTextContent = videoConfig.slides.map(slide => {
         const headline = slide.headerText || '';
         const details = Array.isArray(slide.descPoints) ? slide.descPoints.join(' ') : '';
@@ -174,53 +175,73 @@ class CricketModel {
 
       const apiKey = process.env.GEMINI_API_KEY;
       if (!apiKey) {
-        const fallbackHeadline = videoConfig.slides[0]?.headerText || "Cricket Update";
+        const fallbackHeadline = videoConfig.slides[0]?.headerText || "கிரிக்கெட் செய்தி";
         return {
           seoDetails: {
             bestTitle: `${fallbackHeadline} | Gautam Gambhir Warning to BCCI`,
             alternativeTitles: [
               `பிட்ச் விவகாரத்தில் கம்பீர் அதிரடி | Indian Cricket Pitch Controversy`,
-              `பிசிசிஐ எடுத்த முக்கிய முடிவு | Team India Fast Bowlers Training Camp`
+              `பிசிசிஐ எடுத்த முக்கிய முடிவு | Team India Fast Bowlers Special Camp`
             ],
-            description: rawTextContent + " #CricketTamil #TeamIndia #BCCI #GautamGambhir",
-            tags: [
-              "Cricket Tamil", "Tamil Cricket News", "Gautam Gambhir", "Team India", "BCCI Update", 
-              "Indian Cricket Team", "Pitch Report", "Fast Bowlers", "Cricket News Today Tamil", "IPL 2026",
-              "Gautam Gambhir Speech", "BCCI News Tamil", "Cricket Highlights", "Cricket Tamil Update", "India Cricket News"
-            ]
+            description: rawTextContent + " #CricketTamil #TeamIndia #BCCI",
+            tags: ["Cricket Tamil", "Gautam Gambhir", "Team India", "BCCI", "Tamil Sports News"]
           },
-          thumbnailPrompt: `A dramatic cinematic photo of Indian coach Gautam Gambhir (கௌதம் கம்பீர்) reacting intensely in a cricket stadium press room, high contrast, 4k resolution, sports photojournalism style`
+          thumbnailDetails: {
+            primaryOption: {
+              headingText: "பிட்ச் விவகாரம்: கம்பீர் அதிரடி எச்சரிக்கை!",
+              visualPrompt: "A dramatic cinematic sports photo of Indian head coach Gautam Gambhir looking intense during a stadium press conference, dark high contrast lighting, sports journalism photography, 4k"
+            },
+            secondaryOption: {
+              headingText: "வேகப்பந்து வீச்சாளர்களுக்கு புதிய பிளான்!",
+              visualPrompt: "A dramatic low angle shot of an Indian fast bowler bowling on a cricket pitch under bright stadium floodlights, dynamic action motion blur, 4k resolution"
+            }
+          }
         };
       }
 
       try {
         const ai = new GoogleGenAI({ apiKey });
         const promptText = `
-          You are a top YouTube SEO expert for a viral Tamil cricket channel.
-          Analyze the following cricket news text and output high-CTR YouTube metadata and an image prompt.
+          You are a top YouTube SEO strategist and thumbnail designer for a viral Tamil cricket channel.
+          Analyze the following cricket news content across all slides and generate YouTube SEO metadata and thumbnail specifications.
 
           NEWS CONTENT:
           ${rawTextContent}
 
           OUTPUT RULES:
-          1. "bestTitle": Combine Tamil and English separated by a pipe symbol "|". Example: "தமிழ் தலைப்பு | English Title". Total length under 70 characters.
-          2. "alternativeTitles": Provide 2 alternative titles following the exact same "Tamil | English" format.
-          3. "description": Write a single, clean, cohesive narrative paragraph in Tamil summarizing the entire news. DO NOT include line breaks ("\\n"), "Slide 1", "Slide 2", or bullet symbols. End with relevant hashtags.
-          4. "tags": Provide an extensive array of 12 to 18 trending, high-volume search tags (mix of Tamil keywords, English keywords, and transliterated terms like "cricket news tamil").
-          5. "thumbnailPrompt": Create an ultra-detailed image prompt that explicitly incorporates the relevant Tamil subject/person name along with Tamil action context (e.g., "Indian coach Gautam Gambhir (கௌதம் கம்பீர்) in a tense press conference...") alongside descriptive English camera/style directives for AI generators.
+          1. "bestTitle": Combine Tamil and English separated by a pipe symbol "|". Example: "தமிழ் தலைப்பு | English Title". Under 70 characters.
+          2. "alternativeTitles": Provide 2 alternative titles following the exact "Tamil | English" format.
+          3. "description": Write a single, clean, cohesive narrative paragraph in Tamil summarizing the news. DO NOT include line breaks ("\\n") or slide numbers. End with relevant hashtags.
+          4. "tags": Provide 12 to 18 trending, high-volume search tags (mix of Tamil and English terms).
+          5. "thumbnailDetails": Provide two distinct thumbnail variations (a primary option based on the main hook, and a secondary option highlighting a different narrative angle):
+             - "primaryOption":
+                 - "headingText": A short, high-CTR, 3 to 6 word Tamil headline (under 35 characters).
+                 - "visualPrompt": Pure ENGLISH image prompt describing the primary visual scene (player/coach focus, emotion, lighting, 4k). NO Tamil characters.
+             - "secondaryOption":
+                 - "headingText": An alternative punchy 3 to 6 word Tamil headline focusing on a secondary angle.
+                 - "visualPrompt": Pure ENGLISH image prompt describing a complementary visual scene (e.g., action shot, stadium view, team moment). NO Tamil characters.
 
-          Return ONLY a valid JSON object matching this structure (no markdown code blocks or code fences):
+          Return ONLY a valid JSON object matching this structure (no markdown fences or code blocks):
           {
             "seoDetails": {
               "bestTitle": "Tamil Title | English Title",
               "alternativeTitles": [
-                "Tamil Alt Title 1 | English Alt Title 1",
-                "Tamil Alt Title 2 | English Alt Title 2"
+                "Tamil Alt 1 | English Alt 1",
+                "Tamil Alt 2 | English Alt 2"
               ],
-              "description": "Clean single paragraph Tamil text summarizing news with #hashtags",
-              "tags": ["tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7", "tag8", "tag9", "tag10", "tag11", "tag12"]
+              "description": "Clean Tamil narrative text #hashtags",
+              "tags": ["tag1", "tag2", "tag3", "tag4", "tag5"]
             },
-            "thumbnailPrompt": "Detailed cinematic prompt with Tamil context and English render specs"
+            "thumbnailDetails": [
+              "primaryOption": {
+                "headingText": "முதன்மை தமிழ் தலைப்பு",
+                "visualPrompt": "Primary English visual description for photo generation"
+              },
+              "secondaryOption": {
+                "headingText": "இரண்டாவது தமிழ் தலைப்பு",
+                "visualPrompt": "Secondary English visual description for photo generation"
+              }
+      ]
           }
         `;
 
@@ -234,18 +255,24 @@ class CricketModel {
         return JSON.parse(cleanedJson);
       } catch (error) {
         console.error('Error generating dynamic AI SEO metadata, using fallback:', error.message);
-        const fallbackHeadline = videoConfig.slides[0]?.headerText || "Cricket Update";
+        const fallbackHeadline = videoConfig.slides[0]?.headerText || "கிரிக்கெட் செய்தி";
         return {
           seoDetails: {
             bestTitle: `${fallbackHeadline} | Gautam Gambhir Pitch Statement`,
-            alternativeTitles: [
-              `பிசிசிஐக்கு எச்சரிக்கை விடுத்த கம்பீர் | BCCI Warned By Gautam Gambhir`,
-              `இந்திய கிரிக்கெட்டில் அடுத்த மாற்றம் | Team India Bowlers Special Camp`
-            ],
+            alternativeTitles: [`பிசிசிஐக்கு எச்சரிக்கை விடுத்த கம்பீர் | BCCI Warned By Gautam Gambhir`],
             description: rawTextContent + " #CricketTamil #TeamIndia #BCCI",
-            tags: ["Cricket Tamil", "Gautam Gambhir", "Team India", "BCCI", "Tamil Sports News", "Cricket News Tamil"]
+            tags: ["Cricket Tamil", "Gautam Gambhir", "Team India", "BCCI"]
           },
-          thumbnailPrompt: `A dynamic cinematic shot of Indian head coach Gautam Gambhir (கௌதம் கம்பீர்) standing on a cricket pitch under stadium lights, highly detailed, 4k`
+          thumbnailDetails: {
+            primaryOption: {
+              headingText: "பிட்ச் விவகாரத்தில் கம்பீர் அதிரடி!",
+              visualPrompt: "A dramatic cinematic shot of Indian head coach Gautam Gambhir standing on a cricket pitch under stadium floodlights, highly detailed, 4k"
+            },
+            secondaryOption: {
+              headingText: "பிசிசிஐக்கு கம்பீர் கொடுத்த எச்சரிக்கை!",
+              visualPrompt: "Close up portrait of an intense cricket coach gesturing during a press conference under bright studio lights, 4k resolution"
+            }
+          }
         };
       }
     }
@@ -285,17 +312,17 @@ class CricketModel {
 
         ffmpegProcess.on('close', (code) => {
           slideImages.forEach(file => {
-            try { fs.unlinkSync(file); } catch (e) {}
+            try { fs.unlinkSync(file); } catch (e) { }
           });
 
           if (code === 0) {
             console.log(`\nSuccess! Video ready at: ../${videoConfig.output}`);
             resolve({
               success: true,
-              message: 'Dynamic news video, optimized SEO metadata, and thumbnail prompt generated successfully!',
+              message: 'Dynamic news video, optimized SEO metadata, and thumbnail specs generated successfully!',
               videoPath: videoConfig.output,
               seoDetails: metadataResult.seoDetails,
-              thumbnailPrompt: metadataResult.thumbnailPrompt,
+              thumbnailDetails: metadataResult.thumbnailDetails, // Contains { headingText, visualPrompt }
               timestamp
             });
           } else {
@@ -315,7 +342,7 @@ class CricketModel {
 
     try {
       const defaultVisualPrompt = "A dramatic cinematic shot of Indian cricket coach Gautam Gambhir looking intense and serious in a stadium press room, high contrast, sports photojournalism style, 4k";
-      
+
       // 1. Sanitize the prompt: Remove Tamil/non-ASCII characters and special symbols that trigger HTTP 400
       let rawPrompt = customPrompt || defaultVisualPrompt;
       let cleanPrompt = rawPrompt
@@ -333,20 +360,20 @@ class CricketModel {
       // 2. Fetch AI background image using query-parameter format to prevent 400 URL syntax errors
       try {
         console.log(`Generating base AI image with clean prompt: "${cleanPrompt}"...`);
-        
+
         // Query param syntax prevents URL routing errors
         const aiImageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(cleanPrompt)}?width=1280&height=720&nologo=true&seed=${Date.now()}`;
 
-        const aiImageResponse = await axios.get(aiImageUrl, { 
+        const aiImageResponse = await axios.get(aiImageUrl, {
           responseType: 'arraybuffer',
-          timeout: 10000 
+          timeout: 10000
         });
 
         const bgImageBuffer = Buffer.from(aiImageResponse.data);
         bgBase64 = `data:image/jpeg;base64,${bgImageBuffer.toString('base64')}`;
       } catch (apiError) {
         console.warn(`⚠️ AI Image API returned error (${apiError.message}). Falling back to local Sharp canvas...`);
-        
+
         // Local Fallback: Use picture1.jpg or generate solid backdrop
         if (fs.existsSync('picture1.jpg')) {
           const localImgBuffer = fs.readFileSync('picture1.jpg');
@@ -366,7 +393,7 @@ class CricketModel {
           const logoBuffer = fs.readFileSync('logo.png');
           logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
         }
-      } catch (e) {}
+      } catch (e) { }
 
       // 4. Construct high-impact SVG thumbnail with crisp Tamil typography
       const svgThumbnail = `
@@ -416,10 +443,6 @@ class CricketModel {
 
           <!-- Apply Dark Left Gradient Overlay -->
           <rect width="1280" height="720" fill="url(#textGrad)"/>
-
-          <!-- Breaking News Badge -->
-          <rect x="70" y="60" width="230" height="50" rx="8" fill="url(#badgeGrad)"/>
-          <text x="95" y="94" class="badge-text">முக்கிய செய்தி</text>
 
           <!-- Channel Logo -->
           ${logoBase64 ? `<image href="${logoBase64}" x="1150" y="40" width="80" height="80"/>` : ''}
