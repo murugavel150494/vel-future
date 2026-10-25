@@ -1,5 +1,6 @@
 const { spawn } = require('child_process');
 const ffmpegPath = require('ffmpeg-static');
+const ffmpeg = require('fluent-ffmpeg');
 const { GoogleGenAI } = require('@google/genai');
 const sharp = require('sharp');
 const fs = require('fs');
@@ -9,7 +10,7 @@ require('dotenv').config();
 
 class CricketModel {
   
-  // Helper to get formatted date identifiers: DDMMYYYY and Filename format
+// Helper to get formatted date identifiers: DDMMYYYY and Filename format
   static getFormattedDateIdentifiers() {
     const now = new Date();
     const dd = String(now.getDate()).padStart(2, '0');
@@ -26,10 +27,26 @@ class CricketModel {
   }
 
   static async generateNewsVideoTask(timestamp) {
+    ffmpeg.setFfmpegPath(ffmpegStatic);
+
+    // FIX 1: Corrected font path (.ttf.ttf to .ttf)
+    const fontPath = path.join(__dirname, '../fonts/NotoSansTamil.ttf');
     console.log(`[CricketModel] Executing automated Tamil news video pipeline at ${timestamp}`);
 
-    const fontFileName = 'NotoSansTamil.ttf';
     const bulletSymbol = '*';
+
+    // Load and convert Tamil font to Base64 so SVG and Render Linux environment render it cleanly without boxes
+    let fontBase64 = '';
+    try {
+      if (fs.existsSync(fontPath)) {
+        const fontBuffer = fs.readFileSync(fontPath);
+        fontBase64 = `data:font/ttf;base64,${fontBuffer.toString('base64')}`;
+      } else {
+        console.warn(`[CricketModelWarning] Font file not found at path: ${fontPath}`);
+      }
+    } catch (e) {
+      console.error('[CricketModelError] Failed to read Tamil font file:', e.message);
+    }
 
     // Get date-based folder and file names
     const { folderDate, filename } = this.getFormattedDateIdentifiers();
@@ -169,12 +186,13 @@ class CricketModel {
           }
         } catch (e) { }
 
+        // FIX 2: Embedded base64 font inside SVG style so Linux/Render renders Tamil characters correctly
         let svgContent = `
           <svg width="1280" height="720" xmlns="http://www.w3.org/2000/svg">
             <style>
               @font-face {
                 font-family: 'TamilFont';
-                src: url('${fontFileName}');
+                src: url('${fontBase64}');
               }
               .header { font-family: 'TamilFont', sans-serif; font-size: 26px; fill: ${videoConfig.fontColor}; font-weight: bold; }
               .body { font-family: 'TamilFont', sans-serif; font-size: 20px; fill: ${videoConfig.fontColor}; }
@@ -257,11 +275,11 @@ class CricketModel {
           4. "tags": Provide 12 to 18 trending, high-volume search tags (mix of Tamil and English terms).
           5. "thumbnailDetails": Provide two distinct thumbnail variations:
              - "primaryOption":
-                 - "headingText": A short, high-CTR, 3 to 6 word Tamil headline (under 35 characters).
-                 - "visualPrompt": Pure ENGLISH image prompt describing the primary visual scene. NO Tamil characters.
+                - "headingText": A short, high-CTR, 3 to 6 word Tamil headline (under 35 characters).
+                - "visualPrompt": Pure ENGLISH image prompt describing the primary visual scene. NO Tamil characters.
              - "secondaryOption":
-                 - "headingText": An alternative punchy 3 to 6 word Tamil headline.
-                 - "visualPrompt": Pure ENGLISH image prompt describing a complementary visual scene. NO Tamil characters.
+                - "headingText": An alternative punchy 3 to 6 word Tamil headline.
+                - "visualPrompt": Pure ENGLISH image prompt describing a complementary visual scene. NO Tamil characters.
 
           Return ONLY a valid JSON object matching this structure (no markdown fences or code blocks):
           {
