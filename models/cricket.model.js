@@ -27,7 +27,7 @@ class CricketModel {
   }
 
   static async generateNewsVideoTask(timestamp) {
-    ffmpeg.setFfmpegPath(ffmpegStatic);
+    ffmpeg.setFfmpegPath(ffmpegPath);
 
     // FIX 1: Corrected font path (.ttf.ttf to .ttf)
     const fontPath = path.join(__dirname, '../fonts/NotoSansTamil.ttf');
