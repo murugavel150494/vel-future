@@ -188,7 +188,7 @@ class CricketModel {
 
         // FIX 2: Embedded base64 font inside SVG style so Linux/Render renders Tamil characters correctly
         let svgContent = `
-          <svg width="1280" height="720" xmlns="http://www.w3.org/2000/svg">
+          <svg width="1280" height="720" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
             <style>
               @font-face {
                 font-family: 'TamilFont';
@@ -199,11 +199,10 @@ class CricketModel {
             </style>
             
             <rect width="1280" height="720" fill="${videoConfig.bgColor}"/>
-            <image href="${imgBase64}" x="800" y="0" width="480" height="720"/>
-            <image href="${logoBase64}" x="40" y="35" width="40" height="40" opacity="0.3"/>
+            <image href="${imgBase64}" xlink:href="${imgBase64}" x="800" y="0" width="480" height="720"/>
+            <image href="${logoBase64}" xlink:href="${logoBase64}" x="40" y="35" width="40" height="40" opacity="0.3"/>
             <text x="100" y="65" class="header">${slide.headerText}</text>
         `;
-
         let currentY = 160;
         slide.descPoints.forEach(point => {
           const wrappedLines = wrapTextToLines(point, 36);
