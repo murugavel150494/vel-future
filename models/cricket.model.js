@@ -29,13 +29,12 @@ class CricketModel {
   static async generateNewsVideoTask(timestamp) {
     ffmpeg.setFfmpegPath(ffmpegPath);
 
-    // FIX 1: Corrected font path (.ttf.ttf to .ttf)
     const fontPath = path.join(__dirname, '../fonts/NotoSansTamil.ttf');
     console.log(`[CricketModel] Executing automated Tamil news video pipeline at ${timestamp}`);
 
     const bulletSymbol = '*';
 
-    // Load and convert Tamil font to Base64 so SVG and Render Linux environment render it cleanly without boxes
+    // Load and convert Tamil font to Base64 so SVG and Render Linux environment render it cleanly
     let fontBase64 = '';
     try {
       if (fs.existsSync(fontPath)) {
@@ -140,8 +139,7 @@ class CricketModel {
         const outputPng = path.join(targetDir, `slide_render_${Date.now()}_${i}.png`);
         tempSlideImages.push(outputPng);
 
-        // 1. Process Right-Side Image (Resize & Fit to 480x720)
-        let resizedImgBuffer;
+        let processedImgBuffer;
         try {
           const imgFullPath = path.join(__dirname, '..', slide.imagePath);
           const imageToProcess = fs.existsSync(imgFullPath) ? imgFullPath : slide.imagePath;
@@ -155,16 +153,14 @@ class CricketModel {
           const resizedW = Math.round(metadata.width * ratio);
           const resizedH = Math.round(metadata.height * ratio);
 
-          // Resize original image
-          const croppedResizedBuffer = await originalImage
+          const resizedBuffer = await originalImage
             .resize(resizedW, resizedH)
             .toBuffer();
 
-          // Create a 480x720 canvas for the right side and place the image centered
           const leftOffset = Math.round((targetW - resizedW) / 2);
-          const topOffset = Math.round((targetH - resizedH) / 2);
+          const topOffset = Math.round((targetH - resizedH) / 2) - 40;
 
-          resizedImgBuffer = await sharp({
+          processedImgBuffer = await sharp({
             create: {
               width: targetW,
               height: targetH,
@@ -172,41 +168,47 @@ class CricketModel {
               background: videoConfig.bgColor
             }
           })
-            .composite([{ input: croppedResizedBuffer, left: leftOffset, top: topOffset }])
+            .composite([{ input: resizedBuffer, left: leftOffset, top: topOffset }])
             .png()
             .toBuffer();
 
         } catch (e) {
-          console.error(`[Image Error for ${slide.imagePath}]:`, e.message);
-          resizedImgBuffer = await sharp({
+          processedImgBuffer = await sharp({
             create: { width: 480, height: 720, channels: 4, background: videoConfig.bgColor }
           }).png().toBuffer();
         }
 
-        // 2. Load Logo Buffer if exists
-        let logoBuffer = null;
+        const imgBase64 = `data:image/png;base64,${processedImgBuffer.toString('base64')}`;
+
+        let logoBase64 = '';
         try {
           const logoFullPath = path.join(__dirname, '../logo.png');
           if (fs.existsSync(logoFullPath)) {
-            logoBuffer = await sharp(logoFullPath).resize(40, 40).toBuffer();
+            const logoBuffer = fs.readFileSync(logoFullPath);
+            logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
           }
-        } catch (e) {}
+        } catch (e) { }
 
-        // 3. Build SVG for Text Content (Left side: width 800px, height 720px)
         let svgContent = `
-          <svg width="800" height="720" xmlns="http://www.w3.org/2000/svg">
+          <svg width="1280" height="720" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
             <style>
-              .header { font-family: 'Noto Sans Tamil', 'TamilFont', sans-serif; font-size: 26px; fill: ${videoConfig.fontColor}; font-weight: bold; }
-              .body { font-family: 'Noto Sans Tamil', 'TamilFont', sans-serif; font-size: 20px; fill: ${videoConfig.fontColor}; }
+              @font-face {
+                font-family: 'TamilFont';
+                src: url('${fontBase64}');
+              }
+              .header { font-family: 'TamilFont', sans-serif; font-size: 26px; fill: ${videoConfig.fontColor}; font-weight: bold; }
+              .body { font-family: 'TamilFont', sans-serif; font-size: 20px; fill: ${videoConfig.fontColor}; }
             </style>
             
-            <rect width="800" height="720" fill="${videoConfig.bgColor}"/>
+            <rect width="1280" height="720" fill="${videoConfig.bgColor}"/>
+            <image href="${imgBase64}" xlink:href="${imgBase64}" x="800" y="0" width="480" height="720"/>
+            <image href="${logoBase64}" xlink:href="${logoBase64}" x="40" y="35" width="40" height="40" opacity="0.3"/>
             <text x="100" y="65" class="header">${slide.headerText}</text>
         `;
 
         let currentY = 160;
         slide.descPoints.forEach(point => {
-          const wrappedLines = wrapTextToLines(point, 32);
+          const wrappedLines = wrapTextToLines(point, 36);
           svgContent += `<text x="50" y="${currentY}" class="body" font-weight="bold">${bulletSymbol}</text>`;
 
           wrappedLines.forEach((line) => {
@@ -218,30 +220,7 @@ class CricketModel {
 
         svgContent += `</svg>`;
 
-        // 4. Render Text SVG to Buffer (800x720)
-        const textCanvasBuffer = await sharp(Buffer.from(svgContent))
-          .png()
-          .toBuffer();
-
-        // 5. Composite Text Canvas (Left 0) and Image Buffer (Left 800) into final 1280x720 Slide!
-        let compositeList = [
-          { input: textCanvasBuffer, left: 0, top: 0 },
-          { input: resizedImgBuffer, left: 800, top: 0 }
-        ];
-
-        if (logoBuffer) {
-          compositeList.push({ input: logoBuffer, left: 40, top: 35 });
-        }
-
-        await sharp({
-          create: {
-            width: 1280,
-            height: 720,
-            channels: 4,
-            background: videoConfig.bgColor
-          }
-        })
-          .composite(compositeList)
+        await sharp(Buffer.from(svgContent))
           .png()
           .toFile(outputPng);
       }
@@ -394,7 +373,6 @@ class CricketModel {
         const ffmpegProcess = spawn(ffmpegPath, ffmpegArgs);
 
         ffmpegProcess.on('close', (code) => {
-          // Cleanup temporary slide image renders
           slideImages.forEach(file => {
             try { fs.unlinkSync(file); } catch (e) { }
           });
@@ -404,7 +382,7 @@ class CricketModel {
             resolve({
               success: true,
               message: 'Dynamic news video, optimized SEO metadata, and thumbnail specs generated successfully!',
-              videoPath: relativeVideoPath, // Returns "videoDDMMYYYY/Cricket-news-..."
+              videoPath: relativeVideoPath,
               seoDetails: metadataResult.seoDetails,
               thumbnailDetails: metadataResult.thumbnailDetails,
               timestamp
