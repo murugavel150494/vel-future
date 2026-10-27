@@ -33,6 +33,10 @@ class CricketModel {
     if (!fs.existsSync(fontPath)) {
   throw new Error(`Tamil font not found: ${fontPath}`);
 }
+
+const fontBase64 = `data:font/ttf;base64,${
+  fs.readFileSync(fontPath).toString('base64')
+}`;
 console.log(`[CricketModel] Tamil font loaded: ${fontPath}`);
     const bulletSymbol = '*';
 
@@ -194,7 +198,7 @@ console.log(`[CricketModel] Tamil font loaded: ${fontPath}`);
         let svgContent = `
           <svg width="1280" height="720" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
             <style>
-            @font-face {
+           @font-face {
   font-family: 'TamilFont';
   src: url('${fontBase64}') format('truetype');
 }
