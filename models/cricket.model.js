@@ -34,10 +34,10 @@ class CricketModel {
   throw new Error(`Tamil font not found: ${fontPath}`);
 }
 
-const fontBase64 = `data:font/ttf;base64,${
-  fs.readFileSync(fontPath).toString('base64')
-}`;
-console.log(`[CricketModel] Tamil font loaded: ${fontPath}`);
+// const fontBase64 = `data:font/ttf;base64,${
+//   fs.readFileSync(fontPath).toString('base64')
+// }`;
+console.log(`[CricketModel] Font exists: ${fs.existsSync(fontPath)}`);
     const bulletSymbol = '*';
 
     // Load and convert Tamil font to Base64 so SVG and Render Linux environment render it cleanly
@@ -197,25 +197,21 @@ console.log(`[CricketModel] Tamil font loaded: ${fontPath}`);
 
         let svgContent = `
           <svg width="1280" height="720" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-            <style>
-           @font-face {
-  font-family: 'TamilFont';
-  src: url('${fontBase64}') format('truetype');
-}
+           <style>
+  .header {
+    font-family: 'Noto Sans Tamil';
+    font-size: 26px;
+    fill: ${videoConfig.fontColor};
+    font-weight: bold;
+  }
 
-.header {
-  font-family: 'TamilFont';
-  font-size: 26px;
-  fill: ${videoConfig.fontColor};
-  font-weight: bold;
-}
-
-.body {
-  font-family: 'TamilFont';
-  font-size: 20px;
-  fill: ${videoConfig.fontColor};
-}
-            </style>
+  .body {
+    font-family: 'Noto Sans Tamil';
+    font-size: 20px;
+    fill: ${videoConfig.fontColor};
+    font-weight: normal;
+  }
+</style>
             
             <rect width="1280" height="720" fill="${videoConfig.bgColor}"/>
             <image href="${imgBase64}" xlink:href="${imgBase64}" x="800" y="0" width="480" height="720"/>
