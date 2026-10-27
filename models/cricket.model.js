@@ -111,7 +111,7 @@ console.log(
       logoPath: 'logo.png',
       slides: [
         {
-          headerText: 'பிட்ச் தன்மையை கடுமையாக சாடிய கௌதம் கம்பீர்!',
+          headerText: 'பிட்ச் தன்மையை கடுமையாக சாடிய கௌதம் கம்பீர்! வேகப்பந்து வீச்சாளர்களுக்கு தனி பயிற்சி முகாம்',
           imagePath: 'picture1.jpg',
           descPoints: [
             "இந்திய கிரிக்கெட்டில் பிட்ச்கள் வெறும் பேட்டிங்குக்கு மட்டுமே சாதகமாக மாறுவது பவுலர்களின் எதிர்காலத்தை காலி செய்யும் என ஹெட் கோச் எச்சரித்துள்ளார்.",
@@ -206,19 +206,19 @@ console.log(
   : path.join(__dirname, '../fonts/NotoSansTamil.ttf');
 
         let svgContent = `
-          <svg width="800" height="720" xmlns="http://www.w3.org/2000/svg">
+          <svg width="1280" height="720" xmlns="http://www.w3.org/2000/svg">
             <style>
               .header { font-family: 'Noto Sans Tamil', sans-serif; font-size: 24px; fill: ${videoConfig.fontColor}; font-weight: bold; }
               .body { font-family: 'Noto Sans Tamil', sans-serif; font-size: 20px; fill: ${videoConfig.fontColor}; }
             </style>
             
-            <rect width="800" height="720" fill="${videoConfig.bgColor}"/>
-            <text x="50" y="65" class="header">${slide.headerText}</text>
+            <rect width="1280" height="720" fill="${videoConfig.bgColor}"/>
+            <text x="100" y="65" class="header">${slide.headerText}</text>
         `;
 
-        let currentY = 150;
+        let currentY = 160;
         slide.descPoints.forEach(point => {
-          const wrappedLines = wrapTextToLines(point, 32);
+          const wrappedLines = wrapTextToLines(point, 45);
           svgContent += `<text x="50" y="${currentY}" class="body" font-weight="bold">${bulletSymbol}</text>`;
 
           wrappedLines.forEach((line) => {
