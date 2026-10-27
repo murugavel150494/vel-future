@@ -29,7 +29,16 @@ class CricketModel {
   static async generateNewsVideoTask(timestamp) {
     ffmpeg.setFfmpegPath(ffmpegPath);
 
-    const fontPath = path.join(__dirname, '../fonts/NotoSansTamil.ttf');
+    const fontsDir = path.resolve(__dirname, "../fonts");
+
+process.env.FONTCONFIG_PATH = fontsDir;
+process.env.FONTCONFIG_FILE = path.join(fontsDir, "fonts.conf");
+
+console.log("Tamil fonts directory:", fontsDir);
+console.log(
+  "Tamil font exists:",
+  fs.existsSync(path.join(fontsDir, "NotoSansTamil.ttf"))
+);
     console.log(`[CricketModel] Executing automated Tamil news video pipeline at ${timestamp}`);
 
     const bulletSymbol = '*';
@@ -190,19 +199,17 @@ class CricketModel {
         } catch (e) {}
 
         // 3. Build Pure Tamil SVG Canvas (Using absolute system path for Render Linux)
-        const fontFilePath = fs.existsSync('/opt/render/project/.fonts/NotoSansTamil.ttf') 
-          ? 'file:///opt/render/project/.fonts/NotoSansTamil.ttf' 
-          : path.join(__dirname, '../fonts/NotoSansTamil.ttf');
+      const fontFilePath = fs.existsSync(
+  '/opt/render/project/.fonts/NotoSansTamil.ttf'
+)
+  ? 'file:///opt/render/project/.fonts/NotoSansTamil.ttf'
+  : path.join(__dirname, '../fonts/NotoSansTamil.ttf');
 
         let svgContent = `
           <svg width="800" height="720" xmlns="http://www.w3.org/2000/svg">
             <style>
-              @font-face {
-                font-family: 'NotoSansTamilCustom';
-                src: url('${fontFilePath}');
-              }
-              .header { font-family: 'NotoSansTamilCustom', sans-serif; font-size: 24px; fill: ${videoConfig.fontColor}; font-weight: bold; }
-              .body { font-family: 'NotoSansTamilCustom', sans-serif; font-size: 20px; fill: ${videoConfig.fontColor}; }
+              .header { font-family: 'Noto Sans Tamil', sans-serif; font-size: 24px; fill: ${videoConfig.fontColor}; font-weight: bold; }
+              .body { font-family: 'Noto Sans Tamil', sans-serif; font-size: 20px; fill: ${videoConfig.fontColor}; }
             </style>
             
             <rect width="800" height="720" fill="${videoConfig.bgColor}"/>
