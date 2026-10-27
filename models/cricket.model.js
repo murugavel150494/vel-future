@@ -133,13 +133,14 @@ class CricketModel {
 
     const tempSlideImages = [];
 
-    const generateSlideImages = async () => {
+  const generateSlideImages = async () => {
       for (let i = 0; i < videoConfig.slides.length; i++) {
         const slide = videoConfig.slides[i];
         const outputPng = path.join(targetDir, `slide_render_${Date.now()}_${i}.png`);
         tempSlideImages.push(outputPng);
 
-        let processedImgBuffer;
+        // 1. Process Right Side Image (480x720)
+        let resizedImgBuffer;
         try {
           const imgFullPath = path.join(__dirname, '..', slide.imagePath);
           const imageToProcess = fs.existsSync(imgFullPath) ? imgFullPath : slide.imagePath;
@@ -153,14 +154,14 @@ class CricketModel {
           const resizedW = Math.round(metadata.width * ratio);
           const resizedH = Math.round(metadata.height * ratio);
 
-          const resizedBuffer = await originalImage
+          const croppedResizedBuffer = await originalImage
             .resize(resizedW, resizedH)
             .toBuffer();
 
           const leftOffset = Math.round((targetW - resizedW) / 2);
-          const topOffset = Math.round((targetH - resizedH) / 2) - 40;
+          const topOffset = Math.round((targetH - resizedH) / 2);
 
-          processedImgBuffer = await sharp({
+          resizedImgBuffer = await sharp({
             create: {
               width: targetW,
               height: targetH,
@@ -168,59 +169,84 @@ class CricketModel {
               background: videoConfig.bgColor
             }
           })
-            .composite([{ input: resizedBuffer, left: leftOffset, top: topOffset }])
+            .composite([{ input: croppedResizedBuffer, left: leftOffset, top: topOffset }])
             .png()
             .toBuffer();
 
         } catch (e) {
-          processedImgBuffer = await sharp({
+          console.error(`[Image Error for ${slide.imagePath}]:`, e.message);
+          resizedImgBuffer = await sharp({
             create: { width: 480, height: 720, channels: 4, background: videoConfig.bgColor }
           }).png().toBuffer();
         }
 
-        const imgBase64 = `data:image/png;base64,${processedImgBuffer.toString('base64')}`;
-
-        let logoBase64 = '';
+        // 2. Load Logo Buffer
+        let logoBuffer = null;
         try {
           const logoFullPath = path.join(__dirname, '../logo.png');
           if (fs.existsSync(logoFullPath)) {
-            const logoBuffer = fs.readFileSync(logoFullPath);
-            logoBase64 = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+            logoBuffer = await sharp(logoFullPath).resize(40, 40).toBuffer();
           }
-        } catch (e) { }
+        } catch (e) {}
+
+        // 3. Build Pure Tamil SVG Canvas (Using absolute system path for Render Linux)
+        const fontFilePath = fs.existsSync('/opt/render/project/.fonts/NotoSansTamil.ttf') 
+          ? 'file:///opt/render/project/.fonts/NotoSansTamil.ttf' 
+          : path.join(__dirname, '../fonts/NotoSansTamil.ttf');
 
         let svgContent = `
-          <svg width="1280" height="720" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+          <svg width="800" height="720" xmlns="http://www.w3.org/2000/svg">
             <style>
               @font-face {
-                font-family: 'TamilFont';
-                src: url('${fontBase64}');
+                font-family: 'NotoSansTamilCustom';
+                src: url('${fontFilePath}');
               }
-              .header { font-family: 'TamilFont', sans-serif; font-size: 26px; fill: ${videoConfig.fontColor}; font-weight: bold; }
-              .body { font-family: 'TamilFont', sans-serif; font-size: 20px; fill: ${videoConfig.fontColor}; }
+              .header { font-family: 'NotoSansTamilCustom', sans-serif; font-size: 24px; fill: ${videoConfig.fontColor}; font-weight: bold; }
+              .body { font-family: 'NotoSansTamilCustom', sans-serif; font-size: 20px; fill: ${videoConfig.fontColor}; }
             </style>
             
-            <rect width="1280" height="720" fill="${videoConfig.bgColor}"/>
-            <image href="${imgBase64}" xlink:href="${imgBase64}" x="800" y="0" width="480" height="720"/>
-            <image href="${logoBase64}" xlink:href="${logoBase64}" x="40" y="35" width="40" height="40" opacity="0.3"/>
-            <text x="100" y="65" class="header">${slide.headerText}</text>
+            <rect width="800" height="720" fill="${videoConfig.bgColor}"/>
+            <text x="50" y="65" class="header">${slide.headerText}</text>
         `;
 
-        let currentY = 160;
+        let currentY = 150;
         slide.descPoints.forEach(point => {
-          const wrappedLines = wrapTextToLines(point, 36);
+          const wrappedLines = wrapTextToLines(point, 32);
           svgContent += `<text x="50" y="${currentY}" class="body" font-weight="bold">${bulletSymbol}</text>`;
 
           wrappedLines.forEach((line) => {
             svgContent += `<text x="80" y="${currentY}" class="body">${line}</text>`;
-            currentY += 30;
+            currentY += 32;
           });
           currentY += 20;
         });
 
         svgContent += `</svg>`;
 
-        await sharp(Buffer.from(svgContent))
+        // 4. Convert SVG to Text Canvas Buffer
+        const textCanvasBuffer = await sharp(Buffer.from(svgContent))
+          .png()
+          .toBuffer();
+
+        // 5. Final Composite (Text Left + Image Right)
+        let compositeList = [
+          { input: textCanvasBuffer, left: 0, top: 0 },
+          { input: resizedImgBuffer, left: 800, top: 0 }
+        ];
+
+        if (logoBuffer) {
+          compositeList.push({ input: logoBuffer, left: 40, top: 35 });
+        }
+
+        await sharp({
+          create: {
+            width: 1280,
+            height: 720,
+            channels: 4,
+            background: videoConfig.bgColor
+          }
+        })
+          .composite(compositeList)
           .png()
           .toFile(outputPng);
       }
