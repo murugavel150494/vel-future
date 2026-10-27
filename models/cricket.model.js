@@ -30,28 +30,22 @@ class CricketModel {
     ffmpeg.setFfmpegPath(ffmpegPath);
 
     const fontPath = path.join(__dirname, '../fonts/NotoSansTamil.ttf');
-    if (!fs.existsSync(fontPath)) {
-  throw new Error(`Tamil font not found: ${fontPath}`);
-}
+    console.log(`[CricketModel] Executing automated Tamil news video pipeline at ${timestamp}`);
 
-// const fontBase64 = `data:font/ttf;base64,${
-//   fs.readFileSync(fontPath).toString('base64')
-// }`;
-console.log(`[CricketModel] Font exists: ${fs.existsSync(fontPath)}`);
     const bulletSymbol = '*';
 
     // Load and convert Tamil font to Base64 so SVG and Render Linux environment render it cleanly
-    // let fontBase64 = '';
-    // try {
-    //   if (fs.existsSync(fontPath)) {
-    //     const fontBuffer = fs.readFileSync(fontPath);
-    //     fontBase64 = `data:font/ttf;base64,${fontBuffer.toString('base64')}`;
-    //   } else {
-    //     console.warn(`[CricketModelWarning] Font file not found at path: ${fontPath}`);
-    //   }
-    // } catch (e) {
-    //   console.error('[CricketModelError] Failed to read Tamil font file:', e.message);
-    // }
+    let fontBase64 = '';
+    try {
+      if (fs.existsSync(fontPath)) {
+        const fontBuffer = fs.readFileSync(fontPath);
+        fontBase64 = `data:font/ttf;base64,${fontBuffer.toString('base64')}`;
+      } else {
+        console.warn(`[CricketModelWarning] Font file not found at path: ${fontPath}`);
+      }
+    } catch (e) {
+      console.error('[CricketModelError] Failed to read Tamil font file:', e.message);
+    }
 
     // Get date-based folder and file names
     const { folderDate, filename } = this.getFormattedDateIdentifiers();
@@ -197,21 +191,14 @@ console.log(`[CricketModel] Font exists: ${fs.existsSync(fontPath)}`);
 
         let svgContent = `
           <svg width="1280" height="720" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
-           <style>
-  .header {
-    font-family: 'Noto Sans Tamil';
-    font-size: 26px;
-    fill: ${videoConfig.fontColor};
-    font-weight: bold;
-  }
-
-  .body {
-    font-family: 'Noto Sans Tamil';
-    font-size: 20px;
-    fill: ${videoConfig.fontColor};
-    font-weight: normal;
-  }
-</style>
+            <style>
+              @font-face {
+                font-family: 'TamilFont';
+                src: url('${fontBase64}');
+              }
+              .header { font-family: 'TamilFont', sans-serif; font-size: 26px; fill: ${videoConfig.fontColor}; font-weight: bold; }
+              .body { font-family: 'TamilFont', sans-serif; font-size: 20px; fill: ${videoConfig.fontColor}; }
+            </style>
             
             <rect width="1280" height="720" fill="${videoConfig.bgColor}"/>
             <image href="${imgBase64}" xlink:href="${imgBase64}" x="800" y="0" width="480" height="720"/>
